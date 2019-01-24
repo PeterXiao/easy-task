@@ -1,13 +1,16 @@
+/*
+ *
+ */
 package com.cehome.task.annotation;
 
-import com.cehome.task.console.TimeTaskConsole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.cehome.task.console.TimeTaskConsole;
+
 /**
- * Created by coolma
- *
+ * Created by coolma import org.springframework.beans.factory.annotation.Value;
  */
 @Configuration
 public class TimeTaskConsoleConfiguration {
@@ -17,17 +20,17 @@ public class TimeTaskConsoleConfiguration {
     @Value("${task.heartBeatCheckInterval:30000}")
     private long heartBeatCheckInterval;
 
-    //-- 容灾切换
+    // -- 容灾切换
     @Value("${task.heartBeatSwitchEnable:true}")
-    private boolean switchEnable =true;
+    private final boolean switchEnable = true;
 
     @Bean
-    public TimeTaskConsole createConsoleTimeTask(){
-        TimeTaskConsole consoleTimeTask =new TimeTaskConsole();
-        consoleTimeTask.setHeartBeatCheckInterval(heartBeatCheckInterval);
-        consoleTimeTask.setHeartBeatFailSwitchTime(heartBeatFailSwitchTime);
-        consoleTimeTask.setSwitchEnable(switchEnable);
-        return consoleTimeTask;
+    public TimeTaskConsole createConsoleTimeTask() {
+	final TimeTaskConsole consoleTimeTask = new TimeTaskConsole();
+	consoleTimeTask.setHeartBeatCheckInterval(heartBeatCheckInterval);
+	consoleTimeTask.setHeartBeatFailSwitchTime(heartBeatFailSwitchTime);
+	consoleTimeTask.setSwitchEnable(switchEnable);
+	return consoleTimeTask;
     }
 
 }

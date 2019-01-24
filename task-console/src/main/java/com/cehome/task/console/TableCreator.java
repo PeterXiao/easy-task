@@ -1,8 +1,15 @@
+/*
+ *
+ */
 package com.cehome.task.console;
 
-import com.cehome.task.Constants;
-import com.cehome.task.util.IpAddressUtil;
-import jsharp.util.Common;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 import org.apache.commons.io.IOUtils;
 import org.h2.tools.Server;
 import org.slf4j.Logger;
@@ -13,13 +20,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;
 
-import java.io.InputStream;
-import java.sql.*;
+import com.cehome.task.Constants;
+import com.cehome.task.util.IpAddressUtil;
 
+import jsharp.util.Common;
 
 @Component
-public class TableCreator implements InitializingBean,BeanPostProcessor {
-
+public class TableCreator implements InitializingBean, BeanPostProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(TableCreator.class);
 
@@ -28,7 +35,6 @@ public class TableCreator implements InitializingBean,BeanPostProcessor {
 
     @Value("${task.h2.port:9092}")
     private String h2Port;
-
 
     @Value("${task.autoCreateTable:false}")
     private boolean autoCreateTable;
@@ -56,156 +62,145 @@ public class TableCreator implements InitializingBean,BeanPostProcessor {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if(autoCreateTable) {
-            execute();
-        }
+	if (autoCreateTable) {
+	    execute();
+	}
     }
 
-    private boolean tableExists(Statement st ,String table ,boolean mysql) throws SQLException {
-        ResultSet rs = null;
-        try {
-            if (mysql) {
-                String sql = "show tables like '" + table + "'";
-                rs = st.executeQuery(sql);
-                return rs.next();
-            }else{
-                String sql = "show tables";
-                rs = st.executeQuery(sql);
-                while(rs.next()){
-                    if(rs.getString(1).equalsIgnoreCase(table)){
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }finally {
-            Common.closeObjects(rs);
-        }
+    private boolean tableExists(final Statement st, final String table, final boolean mysql) throws SQLException {
+	ResultSet rs = null;
+	try {
+	    if (mysql) {
+		final String sql = "show tables like '" + table + "'";
+		rs = st.executeQuery(sql);
+		return rs.next();
+	    } else {
+		final String sql = "show tables";
+		rs = st.executeQuery(sql);
+		while (rs.next()) {
+		    if (rs.getString(1).equalsIgnoreCase(table)) {
+			return true;
+		    }
+		}
+		return false;
+	    }
+	} finally {
+	    Common.closeObjects(rs);
+	}
     }
 
-    public  void execute() {
+    public void execute() {
 
-        Connection conn = null;
-        Statement st = null;
-        //ResultSet rs = null;
+	Connection conn = null;
+	Statement st = null;
+	// ResultSet rs = null;
 
+	try {
+	    final boolean mysql = driverClassName.indexOf("mysql") >= 0;
+	    // String table2=table1+"_cache";
 
-        try
-        {
-            boolean mysql=driverClassName.indexOf("mysql") >= 0;
-            //String table2=table1+"_cache";
+	    Class.forName(driverClassName);
 
-            Class.forName(driverClassName);
+	    if (!mysql && h2Start) {
+		try {
+		    final Server server = Server.createTcpServer("-tcpPort", h2Port, "-tcpAllowOthers").start();
 
-            if(!mysql && h2Start){
-                try {
-                    Server server = Server.createTcpServer("-tcpPort", h2Port, "-tcpAllowOthers").start();
+		    System.out.println("h2 server listen at " + server.getURL());
+		} catch (final Exception e) {
+		    e.printStackTrace();
+		}
 
-                    System.out.println("h2 server listen at " + server.getURL());
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
+	    }
 
-            }
+	    conn = DriverManager.getConnection(url, username, password);
 
-            conn = DriverManager.getConnection(url, username, password);
+	    try {
+		logger.info("create begin");
+		st = conn.createStatement();
+		execute(st, mysql, mysql ? "task_mysql.txt" : "task_h2.txt", table);
+		execute(st, mysql, "task_cache.txt", table + "_cache");
 
+		/*
+		 * {
+		 *
+		 * if (tableExists(st,table1,mysql)) { logger.info("table " + table1 +
+		 * " exists.");
+		 *
+		 * }else{ //File file =
+		 * ResourceUtils.getFile("sql/"+(mysql?"task_mysql.txt":"task_h2.txt"));
+		 * InputStream is=
+		 * this.getClass().getClassLoader().getResourceAsStream("sql/"+(mysql?
+		 * "task_mysql.txt":"task_h2.txt")); String sql1=IOUtils.toString(is,"UTF-8");
+		 * is.close(); //String sql1 = FileUtils.readFileToString(file,"UTF-8"); sql1 =
+		 * sql1.replace("${tableName}", table1);
+		 *
+		 * sql1 = sql1.replace("${ip}", useHostName?IpAddressUtil.getLocalHostName():
+		 * IpAddressUtil.getLocalHostAddress()); sql1 = sql1.replace("${appName}",
+		 * appName); st.execute(sql1); logger.info("created  table " + table1); }
+		 *
+		 *
+		 * }
+		 */
 
-            try {
-                logger.info("create begin");
-                st = conn.createStatement();
-                execute(st,mysql,mysql?"task_mysql.txt":"task_h2.txt",table);
-                execute(st,mysql,"task_cache.txt",table+"_cache");
+		/*
+		 * { if (tableExists(st, table2,mysql)) { logger.info("table " + table2 +
+		 * " exists.");
+		 *
+		 * } else { InputStream is=
+		 * this.getClass().getClassLoader().getResourceAsStream("sql/task_cache.txt");
+		 * String sql2=IOUtils.toString(is,"UTF-8"); is.close(); //File file =
+		 * ResourceUtils.getFile("classpath:sql/task_cache.txt"); // String sql2 =
+		 * FileUtils.readFileToString(file, "UTF-8"); sql2 =
+		 * sql2.replace("${tableName}", table2); st.execute(sql2);
+		 * logger.info("created  table " + table2); } }
+		 */
 
+		logger.info("crate end");
+	    } finally {
+		Common.closeObjects(st);
+	    }
 
-                /*{
+	} catch (final Exception e) {
+	    e.printStackTrace();
+	}
 
-                    if (tableExists(st,table1,mysql)) {
-                        logger.info("table " + table1 + " exists.");
+	finally {
+	    Common.closeObjects(st, conn);
 
-                    }else{
-                        //File file = ResourceUtils.getFile("sql/"+(mysql?"task_mysql.txt":"task_h2.txt"));
-                        InputStream is= this.getClass().getClassLoader().getResourceAsStream("sql/"+(mysql?"task_mysql.txt":"task_h2.txt"));
-                        String sql1=IOUtils.toString(is,"UTF-8");
-                        is.close();
-                        //String sql1 = FileUtils.readFileToString(file,"UTF-8");
-                        sql1 = sql1.replace("${tableName}", table1);
-
-                        sql1 = sql1.replace("${ip}", useHostName?IpAddressUtil.getLocalHostName(): IpAddressUtil.getLocalHostAddress());
-                        sql1 = sql1.replace("${appName}", appName);
-                        st.execute(sql1);
-                        logger.info("created  table " + table1);
-                    }
-
-
-                }*/
-
-               /* {
-                    if (tableExists(st, table2,mysql)) {
-                        logger.info("table " + table2 + " exists.");
-
-                    } else {
-                    	InputStream is= this.getClass().getClassLoader().getResourceAsStream("sql/task_cache.txt");
-                        String sql2=IOUtils.toString(is,"UTF-8");
-                        is.close();
-                        //File file = ResourceUtils.getFile("classpath:sql/task_cache.txt");
-                       // String sql2 = FileUtils.readFileToString(file, "UTF-8");
-                        sql2 = sql2.replace("${tableName}", table2);
-                        st.execute(sql2);
-                        logger.info("created  table " + table2);
-                    }
-                }*/
-
-                logger.info("crate end");
-            }finally {
-                Common.closeObjects(st);
-            }
-
-
-
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-
-        finally
-        {
-            Common.closeObjects(st,conn);
-
-        }
-
+	}
 
     }
 
-    private void execute( Statement st,boolean mysql,String sqlFile,String table) throws Exception {
-        if (tableExists(st,table,mysql)) {
-            logger.info("table " + table + " exists.");
+    private void execute(final Statement st, final boolean mysql, final String sqlFile, final String table)
+	    throws Exception {
+	if (tableExists(st, table, mysql)) {
+	    logger.info("table " + table + " exists.");
 
-        }else{
-            //File file = ResourceUtils.getFile("sql/"+(mysql?"task_mysql.txt":"task_h2.txt"));
-            InputStream is= this.getClass().getClassLoader().getResourceAsStream("sql/"+sqlFile);
-            String sql1=IOUtils.toString(is,"UTF-8");
-            is.close();
-            //String sql1 = FileUtils.readFileToString(file,"UTF-8");
-            sql1 = sql1.replace("${tableName}", table);
+	} else {
+	    // File file =
+	    // ResourceUtils.getFile("sql/"+(mysql?"task_mysql.txt":"task_h2.txt"));
+	    final InputStream is = this.getClass().getClassLoader().getResourceAsStream("sql/" + sqlFile);
+	    String sql1 = IOUtils.toString(is, "UTF-8");
+	    is.close();
+	    // String sql1 = FileUtils.readFileToString(file,"UTF-8");
+	    sql1 = sql1.replace("${tableName}", table);
 
-            sql1 = sql1.replace("${ip}", useHostName?IpAddressUtil.getLocalHostName(): IpAddressUtil.getLocalHostAddress());
-            sql1 = sql1.replace("${appName}", appName);
-            st.execute(sql1);
-            logger.info("created  table " + table);
-        }
+	    sql1 = sql1.replace("${ip}",
+		    useHostName ? IpAddressUtil.getLocalHostName() : IpAddressUtil.getLocalHostAddress());
+	    sql1 = sql1.replace("${appName}", appName);
+	    st.execute(sql1);
+	    logger.info("created  table " + table);
+	}
 
-    }
-
-
-
-    @Override
-    public Object postProcessBeforeInitialization(Object o, String s) throws BeansException {
-        return o;
     }
 
     @Override
-    public Object postProcessAfterInitialization(Object o, String s) throws BeansException {
-        return o;
+    public Object postProcessBeforeInitialization(final Object o, final String s) throws BeansException {
+	return o;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(final Object o, final String s) throws BeansException {
+	return o;
     }
 }

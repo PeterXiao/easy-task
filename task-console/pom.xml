@@ -8,17 +8,20 @@
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-   
+
     <artifactId>task-console</artifactId>
     <packaging>jar</packaging>
     <name>task console</name>
     <version>2.0.6-SNAPSHOT</version>
-   
+
     <url>http://maven.apache.org</url>
     <properties>
         <spring-version>3.2.2.RELEASE</spring-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>1.7</java.version>
+        <encoding>UTF-8</encoding>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
     <dependencies>
         <dependency>
